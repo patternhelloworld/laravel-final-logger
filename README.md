@@ -1,5 +1,7 @@
 # Laravel-Final-Logger
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/arwg/laravel-final-logger.svg?style=flat-square)](https://packagist.org/packages/arwg/laravel-final-logger)
+
 ## Overview
 
 Laravel-final-logger provides unique and consistent formats throughout response log, response payload and server-side error log.
