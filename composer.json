@@ -1,0 +1,50 @@
+{
+    "name": "arwg/laravel-final-logger",
+    "description": "Laravel package to keep unique consistency of request, response payload and log formats.",
+    "keywords": [
+        "log",
+        "laravel-final-logger"
+    ],
+    "homepage": "https://github.com/Andrew-Kang-G/laravel-final-logger",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andrew Kang",
+            "email": "studypurpose@naver.com",
+            "role": "Web developer"
+        }
+    ],
+    "require": {
+        "php": "^7.1",
+        "illuminate/support": "~5.8.0|^6.0|^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "~3.8.0|^4.0|^5.0",
+        "phpunit/phpunit": "^8.0|^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Arwg\\FinalLogger\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Arwg\\FinalLogger\\Test\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Arwg\\FinalLogger\\FinalLoggerServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
