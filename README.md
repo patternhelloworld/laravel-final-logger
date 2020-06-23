@@ -4,7 +4,7 @@
 
 Laravel-final-logger provides unique and consistent formats throughout response log, response payload and server-side error log.
 
-<span>1. </span>server-side error log
+<span>1. </span>server-side error log sample
 ```
 {
    "final":{
@@ -38,7 +38,7 @@ Laravel-final-logger provides unique and consistent formats throughout response 
    }
 }
 ```
-<span>2. </span>response log : this is the same as children of the general_log property
+<span>2. </span>response log sample : this is the same as children of the general_log property
 ```
 {
          "ip":"::1",
@@ -54,7 +54,7 @@ Laravel-final-logger provides unique and consistent formats throughout response 
       }
 ```
 
-<span>3. </span>error response payload : this is the same as children of the error_payload
+<span>3. </span>error response payload sample : this is the same as children of the error_payload
 ```
     // userMessage : intended to be sent to clients.
     // internalMessage : not intended to be sent to clients, but logged.
@@ -149,7 +149,7 @@ return [
 ```
 ##### Set certain properties to empty (due to reducing size of log files or whatever...)
 The advantage of the library is that it is possible to set certain properties empty in payload hierarchy.
-Let's say we are setting the property 'binary' empty and 'img_cnt' empty at an uri (api/v2/final-test-uri/images).
+Let's say we are setting the property 'stats' empty and 'img_cnt' empty at an uri (api/v2/final-test-uri/images).
 
 ```json
 {
@@ -176,8 +176,11 @@ This configuration will work on your codes.
 ```php
 // config/final-logger.php
 return [
+    'response_excepted_log_data' => [
+        'api/v2/final-test-uri/images' => [['baseData', 'data','stats'],['baseData', 'data','img_cnt']]
+    ],
     'request_excepted_log_data' => [
-        'api/v2/final-test-uri/images' => [['baseData', 'data','stats', 'binary'],['baseData', 'data','img_cnt']]
+       // ... others
     ]
 ];
 ```
