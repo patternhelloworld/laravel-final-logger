@@ -71,11 +71,6 @@ class GeneralLogHandler implements GeneralLogHandlerInterface
                 $auth_header = $request->header('Authorization', '') ? $request->header('Authorization', '') : isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : null;
             }
 
-            $user = \Auth::user();
-            if ($user) {
-                $user_id = $user->id;
-            }
-
             $uri = $request->route()->uri;
 
             /* paramters not to be written on REQUEST log files  */
@@ -88,6 +83,11 @@ class GeneralLogHandler implements GeneralLogHandlerInterface
 
             $today_time = date("Y-m-d H:i:s");
 
+            $user = \Auth::user();
+            if ($user) {
+                $user_id = $user->id;
+            }
+
             $data_str = json_encode(['ip' => $this->get_client_ip(), 'date' => $today_time, 'type' => $type, 'uri' => $real_uri, 'auth_header' => $auth_header,
                 'user_id' => $user_id, 'request_data' => $request_log_data, 'response_status' => $response_status, 'response_data' => $response_log_data], JSON_UNESCAPED_UNICODE);
 
@@ -97,7 +97,7 @@ class GeneralLogHandler implements GeneralLogHandlerInterface
                 'user_id' => $user_id, 'request_data' => $request_log_data, 'response_status' => $response_status, 'response_data' => $response_log_data], JSON_UNESCAPED_UNICODE);
 
             Payload::processFinalErrorLog(config('final-logger.error_code')['Internal Server Error'],
-                \Arwg\FinalLogger\Exceptions\CommonExceptionModel::getExceptionMessage('createRequestResponseLogText : Failed in creating logs.',
+                \Arwg\FinalLogger\Exceptions\CommonExceptionModel::getExceptionMessage('createRequestResponseLogText : Failed in creating logs. This is mainly due to Auth::user(). No application encryption key has been specified : that error is mainly solved by "php artisan config:cache."',
                     $e->getMessage(),
                     'lowlevelcode : ' . $e->getCode(), config('final-logger.error_user_code')['all unexpected errors'], $e->getTraceAsString()), $data_str_for_error_logging);
 
