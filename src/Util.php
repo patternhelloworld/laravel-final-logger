@@ -35,11 +35,13 @@ trait Util
 
             if (is_object($object)) {
 
-                $property = $object->{$propertyName};
-
                 if (!property_exists($object, $propertyName)) return NULL;
 
+                $property = $object->{$propertyName};
+
             } else if (is_array($object)) {
+
+                if(!$object[$propertyName]) return NULL;
 
                 $property = $object[$propertyName];
 
@@ -64,6 +66,9 @@ trait Util
         $lastProperty = array_pop($propertyPath);
         // get the object to which the last property should belong
         $targetObject = $this->get_property($propertyPath, $object);
+        IF(!$targetObject){
+            return;
+        }
         // and set it to value if it is valid
         if (is_object($targetObject) && property_exists($targetObject, $lastProperty)) {
             $targetObject->{$lastProperty} = $value;
