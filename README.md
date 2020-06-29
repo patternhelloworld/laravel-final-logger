@@ -4,7 +4,7 @@
 
 ## Overview
 
-Laravel-final-logger provides unique and consistent formats throughout response log, response payload and server-side error log.
+Laravel-final-logger provides unique and consistent formats throughout response log, response payload and server-side error log. Also, you can nullify any children properties to reduce the size of logged files.
 
 <span>1. </span>server-side error log sample
 ```
@@ -40,7 +40,7 @@ Laravel-final-logger provides unique and consistent formats throughout response 
    }
 }
 ```
-<span>2. </span>response log sample : this is the same as children of the general_log property
+<span>2. </span>response log sample : this is the same as children of the general_log property above.
 ```
 {
          "ip":"::1",
@@ -56,7 +56,7 @@ Laravel-final-logger provides unique and consistent formats throughout response 
       }
 ```
 
-<span>3. </span>error response payload sample : this is the same as children of the error_payload
+<span>3. </span>error response payload sample : this is the same as children of the error_payload above.
 ```
     // userMessage : intended to be sent to clients.
     // internalMessage : not intended to be sent to clients, but logged.
