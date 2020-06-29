@@ -91,7 +91,7 @@ class GeneralLogHandler implements GeneralLogHandlerInterface
             $data_str = json_encode(['ip' => $this->get_client_ip(), 'date' => $today_time, 'type' => $type, 'uri' => $real_uri, 'auth_header' => $auth_header,
                 'user_id' => $user_id, 'request_data' => $request_log_data, 'response_status' => $response_status, 'response_data' => $response_log_data], JSON_UNESCAPED_UNICODE);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
 
             $data_str_for_error_logging = json_encode(['ip' => $this->get_client_ip(), 'date' => $today_time, 'type' => $type, 'uri' => $real_uri, 'auth_header' => $auth_header,
                 'user_id' => $user_id, 'request_data' => $request_log_data, 'response_status' => $response_status, 'response_data' => $response_log_data], JSON_UNESCAPED_UNICODE);

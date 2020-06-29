@@ -43,7 +43,7 @@ class WriteGeneralLog
             $this->generalLogHandler->processFinalGeneralLog($data, $log_path);
 
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
 
 
             $this->errorLogHandler->processFinalErrorLog(config('final-logger.error_code')['Internal Server Error'], \Arwg\FinalLogger\Exceptions\CommonExceptionModel::getExceptionMessage('Failed to log all_request_response',

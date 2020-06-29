@@ -57,7 +57,7 @@ class ErrorLogHandler implements ErrorLogHandlerInterface
 
             }
 
-        } catch (\Exception $e2) {
+        } catch (\Throwable $e2) {
 
             if (!$e2 instanceof FinalException) {
 
