@@ -66,6 +66,10 @@ class Handler extends ExceptionHandler
                 if (Config('app.env') && Config('app.env') == 'local') {
                     return parent::render($request, $exception->getPrevious() ? $exception->getPrevious() : $exception);
                 }else{ 
+                    // Follow Laravel auth in case of HttpRequest 401, 422.
+                    if($exception->getCode() == 422 || $exception->getCode() == 401){
+                        return parent::render($request, $exception->getPrevious() ? $exception->getPrevious() : $exception);
+                    }
                     // Customize this according to your environment.
                     return response()->view('errors.error01', ['code' => '...', 'message' => 'Server error. Ask the administrator.']);
                 }
