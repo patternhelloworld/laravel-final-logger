@@ -266,14 +266,14 @@ return [
 ```
 
 ####4. How to throw errors on codes
-for handled errors
+For handled errors, use this unique format.
 ```php
 // In case of NOT Ajax, add a current exception to the last parameter of FinalException (like $e below). 
   throw new FinalException('requested email address is not valid.',
                "", config('final-logger.error_user_code')['parameter validation'], "",
         config('final-logger.error_code')['Bad Request'], $e);
 ```
-or for unhandled errors
+or for unhandled errors. No need to handle any. But if you need...
 ```php
   Payload::createFinalException($e, function ($e){
        // example
