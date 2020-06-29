@@ -4,7 +4,309 @@
 
 ## Overview
 
-Laravel-final-logger provides unique and consistent formats throughout response log, response payload and server-side error log. Also, you can nullify any children properties to reduce the size of logged files.
+Laravel-final-logger provides unique and consistent formats throughout log (all Http, Ajax requests & responses), payload (all Http, Ajax requests & responses), and server-side error log. 
+Also, you can nullify any children properties to reduce the size of logged files.
+
+## Installation
+```bash
+composer require arwg/laravel-final-logger
+php artisan vendor:publish --provider="Arwg\FinalLogger\FinalLoggerServiceProvider" --tag="config" 
+```
+
+## Usage
+
+Simple to use
+
+####1. How to error-log
+
+```php
+
+// app/Http/Exceptions/Handler.php (or your registered Handler)
+
+namespace App\Exceptions;
+use Arwg\FinalLogger\Payload;
+use Exception;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+
+class Handler extends ExceptionHandler
+{
+    protected $dontReport = [
+    ];
+
+    public function report(Exception $exception)
+    {
+        // If you want to leave auth token invalidation info, don't comment this.
+        if ($this->shouldntReport($exception)) {
+            return;
+        }
+
+        // Can use only 'Payload::reportError($exception)' but recommends to create your own FinalException. So I have created a sample below.
+        Payload::reportError($exception, function ($exception){
+              return $this->createFinalException($exception);
+           });
+
+    }
+
+    public function render($request, Exception $exception)
+    {
+        $message = null;
+
+        /* XmlHttpRequest (Ajax) */
+        if (\Request::wantsJson()) {
+         
+            if (Config('app.env') && Config('app.env') == 'local') {
+                return Payload::renderError($exception, false);
+            }else{
+                return Payload::renderError($exception, true);
+            }
+
+        } else {
+            /* HttpRequest */
+            try{
+                if (Config('app.env') && Config('app.env') == 'local') {
+                    return parent::render($request, $exception->getPrevious() ? $exception->getPrevious() : $exception);
+                }else{ 
+                    // Customize this according to your environment.
+                    return response()->view('errors.error01', ['code' => '...', 'message' => 'Server error. Ask the administrator.']);
+                }
+            }catch (\Throwable $e){
+                // Customize this according to your environment.
+                return response()->view('errors.error01', ['code' => '...', 'message' => 'Server error. Ask the administrator.']);
+            }
+
+
+        }
+
+    }
+
+    // This is only sample. You can create your own FinalException.
+    private function createFinalException(\Exception $e) : FinalException
+    {
+        $internalMessage = $e->getMessage();
+        $lowLeverCode = $e->getCode();
+
+        // 422: Laravel validation error
+        if (isset($e->status) && $e->status == 422) {
+            return new FinalException('Failed in Laravel validation check.',
+                $internalMessage, config('final-logger.error_user_code')['paraemeter validation'], $e->errors(),
+                config('final-logger.error_code')['Unprocessable Entity'], $e->getTraceAsString(), $e);
+        }// 401 Oauth2 (id, password)
+        else if ($e instanceof AuthenticationException || ($e instanceof ClientException && $lowLeverCode == 401)) {
+
+            if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+                $internalMessage .= ' / ' . $_SERVER['HTTP_AUTHORIZATION'];
+            }
+
+            if (preg_match('/invalid.credentials|Unauthorized/', $internalMessage)) {
+                return new FinalException('Wrong ID, Password.',
+                    $internalMessage, null, "",
+                    config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString(), $e);
+
+            } else if (preg_match('/Unauthenticated/', $internalMessage)) {
+                return new FinalException('token not valid.',
+                    $internalMessage, null, "",
+                    config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString(), $e);
+            } else {
+                return new FinalException('Auth error.',
+                    $internalMessage, null, "",
+                    config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString(), $e);
+            }
+        } // Oauth2 (token)
+        else if ($e instanceof OAuthServerException) {
+            return new FinalException('Oauth2 token error.',
+                $internalMessage, config('final-logger.error_user_code')['AccessToken error'], $e->getPayload(),
+                config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString(), $e);
+
+        } else {
+
+            $userCode = config('final-logger.error_user_code')['all unexpected errors'];
+
+            return  new FinalException('Data (server-side) error has occurred.',
+                $internalMessage, $userCode, "LowLeverCode : " . $lowLeverCode,
+                config('final-logger.error_code')['Internal Server Error'], $e->getTraceAsString(), $e);
+        }
+
+
+    }
+
+}
+```
+
+####2. How to general-log
+
+##### IMPORTANT
+Register logging path on 'config/final-logger.php'
+```php
+return [
+    'general_log_path' => 'your-path',  // necessary
+];
+```
+Register this Middleware to 'app/Http/Kernal.php'
+```php
+    protected $routeMiddleware = [
+        //...
+        'your-name' => \Arwg\FinalLogger\Middlewares\WriteGeneralLog::class
+    ];
+```
+```php
+// In api, web.php. Surround every route.
+Route::group(['middleware' => 'your-name'], function () {
+//...
+});
+```
+
+##### Set certain properties to empty (due to reducing size of log files or whatever...)
+The advantage of the library is that it is possible to set certain properties empty in payload hierarchy.
+Let's say we are setting the property 'stats' empty and 'img_cnt' empty at an uri (api/v2/final-test-uri/images).
+
+```json
+{
+   "baseData":{
+      "data":{
+         "stats":[
+            {
+               "id":18,
+               "binary":"base64LDLDLDLS....",
+               "cnt":1,
+               "created_at":"2020-06-10 15:19:56",
+               "updated_at":"2020-06-10 15:19:56"
+            }
+         ],
+         "img_cnt":9,
+         "img_total_cnt":100000
+      }
+   },
+   "successCode":200
+}
+```
+Modify 'config/final-logger.php'.
+```php
+// config/final-logger.php
+return [
+    'response_excepted_log_data' => [
+        'api/v2/final-test-uri/images' => [['baseData', 'data','stats'],['baseData', 'data','img_cnt']]
+    ],
+    'request_excepted_log_data' => [
+       // ... others
+    ]
+];
+```
+Now they all have been marked as "xxx" for 'api/v2/final-test-uri/images'.
+
+```json
+{
+   "baseData":{
+      "data":{
+         "stats":[
+            {
+               "id":18,
+               "binary":"xxx",
+               "cnt":1,
+               "created_at":"2020-06-10 15:19:56",
+               "updated_at":"2020-06-10 15:19:56"
+            }
+         ],
+         "img_cnt":"xxx",
+         "img_total_cnt":100000
+      }
+   },
+   "successCode":200
+}
+```
+
+####3. Config file
+Check the properties marked 'necessary' below. The others are just what I customized.
+```php
+
+// config/final-logger.php
+
+return [
+
+    'general_logger' => \Arwg\FinalLogger\GeneralLogHandler::class,  // necessary
+    'error_logger' => \Arwg\FinalLogger\ErrorLogHandler::class,  // necessary
+    'general_log_path' => config('app.dashboard_all_request_response'),  // necessary
+
+    'request_excepted_log_data' => [
+        'final-test-uri' => [['password'],['password_reset']]
+    ],
+
+    'response_excepted_log_data' => [
+        'final-test-uri' => [['a','b', 'c'], ['a','d']]
+    ],
+
+    'success_code' => [
+        'OK' => 200,
+        'No Content' => 204
+    ],
+
+    'error_code' => [
+        'Internal Server Error' => 500, // necessary
+
+        'Bad Request' => 400, 
+        'Unauthorized' => 401,
+        'Not Found' => 404,
+        'Request Timeout' => 408,
+        'Precondition Failed' => 412,
+        'Unprocessable Entity' => 422 
+    ],
+
+    'error_user_code' => [
+
+        'all unexpected errors' => 900, // necessary
+
+        'socket error' => 1113,
+        'DB procedure...' => 1200,
+    ]
+
+];
+```
+
+####4. How to throw errors on codes
+for handled errors
+```php
+// In case of NOT Ajax, add a current exception to the last parameter of FinalException (like $e below). 
+  throw new FinalException('requested email address is not valid.',
+               "", config('final-logger.error_user_code')['parameter validation'], "",
+        config('final-logger.error_code')['Bad Request'], $e);
+```
+or for unhandled errors
+```php
+  Payload::createFinalException($e, function ($e){
+       // example
+        return new FinalException(...);
+       // OR I recommend creating one function as shown Number 1.
+  });
+```
+
+####<span>5. Error logging without throwing exceptions </span>
+This doesn't make application stop but just log.
+```php
+        try {
+            $binary = Storage::disk('aaa')->get($file_name);
+        }catch (\Exception $e){
+            Payload::processFinalErrorLog(config('final-logger.error_code')['Internal Server Error'], \Arwg\FinalLogger\Exceptions\CommonExceptionModel::getExceptionMessage('error when opening a file',
+                $e->getMessage(),
+                'lowlevelcode : ' . $e->getCode(),  config('final-logger.error_user_code')['all unexpected errors'], $e->getTraceAsString()));
+        }
+
+```
+
+####6. Success payload (not necessary)
+```php
+class ArticleController extends Controller
+{
+    public function index(Request $request)
+    {
+  
+        $data = $this->getData($$request->all());
+
+        return Payload::renderSuccess(['list' => $data], config('final-logger.success_code')['OK']);
+    }
+}
+
+```
+
+## Samples
 
 <span>1. </span>server-side error log sample
 ```
@@ -84,325 +386,6 @@ We focus on the final endpoints, so logging is conducted at the only following t
 
 No request endpoint logging is conducted, as the two points can catch all request data.
 
-## Installation
-
-
-```bash
-composer require arwg/laravel-final-logger
-php artisan vendor:publish --provider="Arwg\FinalLogger\FinalLoggerServiceProvider" --tag="config" 
-```
-## Usage
-
-####<span>1. </span><b>Config file (example)</b>
-```php
-
-// config/final-logger.php
-
-return [
-
-    'general_logger' => \Arwg\FinalLogger\GeneralLogHandler::class,  // necessary
-    'error_logger' => \Arwg\FinalLogger\ErrorLogHandler::class,  // necessary
-    'general_log_path' => config('app.dashboard_all_request_response'),  // necessary
-
-    'request_excepted_log_data' => [
-        'final-test-uri' => [['password'],['password_reset']]
-    ],
-
-    'response_excepted_log_data' => [
-        'final-test-uri' => [['a','b', 'c'], ['a','d']]
-    ],
-
-    'success_code' => [
-        'OK' => 200,
-        'No Content' => 204
-    ],
-
-    'error_code' => [
-        'Internal Server Error' => 500, // necessary
-        'Bad Request' => 400, 
-        'Unauthorized' => 401,
-        'Not Found' => 404,
-        'Request Timeout' => 408,
-        'Precondition Failed' => 412,
-        'Unprocessable Entity' => 422 
-    ],
-
-    'error_user_code' => [
-
-        'all unexpected errors' => 900, // necessary
-
-        'socket error' => 1113,
-
-        'DB procedure...' => 1200,
-    ]
-
-];
-```
-
-
-####<span>2. General log </span><br/>
-
-##### Register general Log path
-Register logging path on 'config/final-logger.php'
-```php
-return [
-    'general_log_path' => config('app.dashboard_all_request_response'),  // necessary
-];
-```
-##### Set certain properties to empty (due to reducing size of log files or whatever...)
-The advantage of the library is that it is possible to set certain properties empty in payload hierarchy.
-Let's say we are setting the property 'stats' empty and 'img_cnt' empty at an uri (api/v2/final-test-uri/images).
-
-```json
-{
-   "baseData":{
-      "data":{
-         "stats":[
-            {
-               "id":18,
-               "binary":"base64LDLDLDLS....",
-               "cnt":1,
-               "created_at":"2020-06-10 15:19:56",
-               "updated_at":"2020-06-10 15:19:56"
-            }
-         ],
-         "img_cnt":9,
-         "img_total_cnt":100000
-      }
-   },
-   "successCode":200
-}
-```
-
-This configuration will work on your codes.
-```php
-// config/final-logger.php
-return [
-    'response_excepted_log_data' => [
-        'api/v2/final-test-uri/images' => [['baseData', 'data','stats'],['baseData', 'data','img_cnt']]
-    ],
-    'request_excepted_log_data' => [
-       // ... others
-    ]
-];
-```
-Now they all have been marked as "xxx" for 'api/v2/final-test-uri/images'.
-
-```json
-{
-   "baseData":{
-      "data":{
-         "stats":[
-            {
-               "id":18,
-               "binary":"xxx",
-               "cnt":1,
-               "created_at":"2020-06-10 15:19:56",
-               "updated_at":"2020-06-10 15:19:56"
-            }
-         ],
-         "img_cnt":"xxx",
-         "img_total_cnt":100000
-      }
-   },
-   "successCode":200
-}
-
-```
-####<span>3. Error log </span>
- 
-```php
-
-// app/Http/Exceptions/Handler.php (or your registered Handler)
-
-namespace App\Exceptions;
-use App\Enum\Enums;
-use App\Http\CustomPayload;
-use Arwg\FinalLogger\Payload;
-use Exception;
-use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-
-class Handler extends ExceptionHandler
-{
-    protected $dontReport = [
-        /*        \Illuminate\Auth\AuthenticationException::class,
-                \Illuminate\Auth\Access\AuthorizationException::class,
-                \Illuminate\Validation\ValidationException::class,*/
-    ];
-
-    public function report(Exception $exception)
-    {
-
-        if ($this->shouldntReport($exception)) {
-            return;
-        }
-
-        if (\Request::wantsJson()) {
-
-            Payload::reportError($exception, function ($exception){
-                // This is just a sample. You can create your own 'FinalException' 
-                CustomPayload::createFinalException($exception);   
-            });
-
-        } 
-        else {
-
-            if (config('app.env') != 'real') {
-                // In case you use filp/whoops for local development.
-                parent::report($exception);
-
-            } else {
-
-                Payload::reportError($exception, function ($exception){
-                    CustomPayload::createFinalException($exception);
-                });
-            }
-
-        }
-
-
-    }
-
-
-    public function render($request, Exception $exception)
-    {
-        $message = null;
-
-        /* 1.  XmlHttpRequest */
-        if (\Request::wantsJson()) {
-
-            if (Config('app.env') && Config('app.env') == 'real') {
-                return Payload::renderError($exception, true);
-            }else{
-                return Payload::renderError($exception, false);
-            }
-
-        } else {
-
-            /* 2. HttpRequest */
-            if (config('app.env') != 'real') {
-                // In case you use filp/whoops for local development.
-                return parent::render($request, $exception);
-            } else {
-                return response()->view('error page', ['code' => '...', 'message' => 'server is being updated. Ask the administrator.']);
-            }
-
-        }
-
-    }
-
-}
-
-// App\Http\CustomPayload (This is just a sample. You can create your own 'FinalException')
-
-
-namespace App\Http;
-
-use Arwg\FinalLogger\Exceptions\FinalException;
-use GuzzleHttp\Exception\ClientException;
-use Illuminate\Auth\AuthenticationException;
-use League\OAuth2\Server\Exception\OAuthServerException;
-
-
-class CustomPayload
-{
-
-    public static function createFinalException(\Exception $e)
-    {
-        $internalMessage = $e->getMessage();
-        $lowLeverCode = $e->getCode();
-
-        // 422: Laravel validation error
-        if (isset($e->status) && $e->status == 422) {
-            throw new FinalException('Failed in Laravel validation check.',
-                $internalMessage, config('final-logger.error_user_code')['validation for parameters'], $e->errors(),
-                config('final-logger.error_code')['Unprocessable Entity'], $e->getTraceAsString());
-        }// 401 Oauth2 (id, password)
-        else if ($e instanceof AuthenticationException || ($e instanceof ClientException && $lowLeverCode == 401)) {
-
-            if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-                $internalMessage .= ' / ' . $_SERVER['HTTP_AUTHORIZATION'];
-            }
-
-            if (preg_match('/invalid.credentials/', $internalMessage)) {
-
-                throw new FinalException('Check ID or password.',
-                    $internalMessage, config('final-logger.error_user_code')['id password error'], "",
-                    config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString());
-
-            } else if (preg_match('/Unauthenticated/', $internalMessage)) {
-                throw new FinalException('Invalid token.',
-                    $internalMessage, config('final-logger.error_user_code')['oauth2 auth error'], "",
-                    config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString());
-            } else {
-                throw new FinalException('Oauth2 authentication info is not in accordance.',
-                    $internalMessage, config('final-logger.error_user_code')['oauth2 auth info error'], "",
-                    config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString());
-            }
-        } // Oauth2 (token)
-        else if ($e instanceof OAuthServerException) {
-            throw new FinalException('Oauth2 token error.',
-                $internalMessage, config('final-logger.error_user_code')['AccessToken expired'], $e->getPayload(),
-                config('final-logger.error_code')['Unauthorized'], $e->getTraceAsString());
-
-        } else {
-
-            $userCode = config('final-logger.error_user_code')['all unexpected errors'];
-
-            // 500: unexpected errors
-            throw new FinalException('Data (server-side) error has occurred.',
-                $internalMessage, $userCode, "LowLeverCode : " . $lowLeverCode,
-                config('final-logger.error_code')['Internal Server Error'], $e->getTraceAsString());
-        }
-
-
-    }
-
-
-
-}
-```
-####<span>4. Error logging throwing exceptions </span>
-for handled errors
-```php
-  throw new FinalException('requested email address is not valid.',
-               "", config('final-logger.error_user_code')['parameter validation'], "",
-        config('final-logger.error_code')['Bad Request']);
-```
-or for unhandled errors
-```php
-  Payload::createFinalException($e, function ($e){
-       // example
-         CustomPayload::createFinalException($e);
-  });
-```
-
-####<span>5. Error logging without throwing exceptions </span>
-```php
-        try {
-            $binary = Storage::disk('aaa')->get($file_name);
-        }catch (\Exception $e){
-            Payload::processFinalErrorLog(config('final-logger.error_code')['Internal Server Error'], \Arwg\FinalLogger\Exceptions\CommonExceptionModel::getExceptionMessage('error when opening a file',
-                $e->getMessage(),
-                'lowlevelcode : ' . $e->getCode(),  config('final-logger.error_user_code')['all unexpected errors'], $e->getTraceAsString()));
-        }
-
-```
-
-####<span>6. Success payload (not necessary. this is not related to logging.) </span>
-```php
-class ArticleController extends Controller
-{
-    public function index(Request $request)
-    {
-  
-        $data = $this->getData($$request->all());
-
-        return Payload::renderSuccess(['list' => $data], config('final-logger.success_code')['OK']);
-    }
-...
-
-```
 
 
 ### Changelog

@@ -116,7 +116,6 @@ class GeneralLogHandler implements GeneralLogHandlerInterface
             if ($_SERVER['REQUEST_METHOD'] == "GET") {
                 $fullPath = $log_path . '/Get_' . $today . '.log';
             } else {
-                // CUD 를 모두 포함
                 $fullPath = $log_path . '/Post_' . $today . '.log';
             }
         } else {

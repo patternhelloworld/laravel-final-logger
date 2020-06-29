@@ -33,6 +33,11 @@ class ErrorLogHandler implements ErrorLogHandlerInterface
     {
         try {
 
+            $internalMessage = $e->getMessage();
+            $lowLeverCode = $e->getCode();
+
+            $userCode = config('final-logger.error_user_code')['all unexpected errors'];
+
             if ($e instanceof FinalException) {
                 // Throw this to Handler
                 throw $e;
@@ -40,18 +45,24 @@ class ErrorLogHandler implements ErrorLogHandlerInterface
 
             if($custom_func) {
 
-                call_user_func($custom_func, $e);
+                $customized_return = call_user_func($custom_func, $e);
+
+                if ($customized_return instanceof FinalException) {
+                    // Throw this to Handler
+                    throw $customized_return;
+
+                }else{
+                    // 500: all unexpected errors
+                    throw new FinalException('Your customized function does not return FinalException.',
+                        $internalMessage, $userCode, "LowLeverCode : " . $lowLeverCode,
+                        config('final-logger.error_code')['Internal Server Error'], $e->getTraceAsString());
+                }
+
 
             }else {
 
-                /* All the errors have to be 'FinalException'. So now we are now creating the format. */
-                $internalMessage = $e->getMessage();
-                $lowLeverCode = $e->getCode();
-
-                $userCode = config('final-logger.error_user_code')['all unexpected errors'];
-
                 // 500: all unexpected errors
-                throw new FinalException('Data (server-side) error has occurred.',
+                throw new FinalException('Data (server-side) error has occurred. (Recommend creating your own FinalException)',
                     $internalMessage, $userCode, "LowLeverCode : " . $lowLeverCode,
                     config('final-logger.error_code')['Internal Server Error'], $e->getTraceAsString());
 
@@ -63,7 +74,7 @@ class ErrorLogHandler implements ErrorLogHandlerInterface
 
                 throw new FinalException("Failed to create 'FinalException'",
                     $e2->getMessage(), config('final-logger.error_user_code')['all unexpected errors'], "LowLeverCode : " . $e2->getCode(),
-                    config('final-logger.error_code')['Internal Server Error'], $e2->getTraceAsString());
+                    config('final-logger.error_code')['Internal Server Error'], $e2->getTraceAsString() , $e);
             }else{
                 throw $e2;
             }
