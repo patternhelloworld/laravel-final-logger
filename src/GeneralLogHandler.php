@@ -68,7 +68,7 @@ class GeneralLogHandler implements GeneralLogHandlerInterface
             }
 
             if ($request->header()) {
-                $auth_header = $request->header('Authorization', '') ? $request->header('Authorization', '') : isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : null;
+                $auth_header = $request->header('Authorization', '') ? $request->header('Authorization', '') : (isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : null);
             }
 
             $uri = $request->route()->uri;
