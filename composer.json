@@ -39,6 +39,7 @@
         "sort-packages": true
     },
     "extra": {
+        "branch-alias" : {"dev-master" : "v1.0.7-dev"},
         "laravel": {
             "providers": [
                 "Arwg\\FinalLogger\\FinalLoggerServiceProvider"

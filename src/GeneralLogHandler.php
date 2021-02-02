@@ -71,7 +71,9 @@ class GeneralLogHandler implements GeneralLogHandlerInterface
                 $auth_header = $request->header('Authorization', '') ? $request->header('Authorization', '') : (isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : null);
             }
 
-            $uri = $request->route()->uri;
+            if($request->route()) {
+                $uri = $request->route()->uri;
+            }
 
             /* paramters not to be written on REQUEST log files  */
             $request_log_data = $this->nullifyPropertyForLogging($request->all(), $uri,  config('final-logger.request_excepted_log_data'));
