@@ -12,6 +12,62 @@ Also, you can nullify any children properties to reduce the size of logged files
 composer require arwg/laravel-final-logger
 php artisan vendor:publish --provider="Arwg\FinalLogger\FinalLoggerServiceProvider" --tag="config" 
 ```
+#### config/app.php
+```php
+    'providers' => [
+            Arwg\FinalLogger\FinalLoggerServiceProvider::class
+    ]
+```
+#### bootstrap/app.php
+```php
+    $app->singleton(Arwg\FinalLogger\ErrorLogHandlerInterface::class, Arwg\FinalLogger\ErrorLogHandler::class);
+    $app->singleton(Arwg\FinalLogger\GeneralLogHandlerInterface::class, Arwg\FinalLogger\GeneralLogHandler::class);
+    $app->singleton(Arwg\FinalLogger\Exceptions\CommonExceptionModel::class, function ($app) {
+        return new Arwg\FinalLogger\Exceptions\CommonExceptionModel();
+    });
+```
+#### config/final-logger.php (sample)
+```php
+return [
+
+    'general_logger' => \Arwg\FinalLogger\GeneralLogHandler::class,  // necessary
+    'error_logger' => \Arwg\FinalLogger\ErrorLogHandler::class,  // necessary
+    'general_log_path' => 'your-path',  // necessary
+
+    'request_excepted_log_data' => [
+        'final-test-uri' => [['password'],['password_reset']]
+    ],
+
+    'response_excepted_log_data' => [
+        'final-test-uri' => [['a','b', 'c'], ['a','d']]
+    ],
+
+    'success_code' => [
+        'OK' => 200,
+        'No Content' => 204
+    ],
+
+    'error_code' => [
+        'Internal Server Error' => 500, // necessary
+
+        'Bad Request' => 400, 
+        'Unauthorized' => 401,
+        'Not Found' => 404,
+        'Request Timeout' => 408,
+        'Precondition Failed' => 412,
+        'Unprocessable Entity' => 422 
+    ],
+
+    'error_user_code' => [
+
+        'all unexpected errors' => 900, // necessary
+
+        'socket error' => 1113,
+        'DB procedure...' => 1200,
+    ]
+
+];
+```
 
 ## Usage
 
