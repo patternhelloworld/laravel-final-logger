@@ -4,7 +4,7 @@
 
 ## Overview
 
-Laravel-final-logger provides unique and consistent formats for logs across all HTTP and Ajax requests and responses. Additionally, it allows you to nullify any child properties to reduce the size of log files.
+Laravel-final-logger provides unique and consistent formats for logs across all HTTP and Ajax requests and responses, as well as server-side error logs. Additionally, it allows you to nullify any child properties to reduce the size of log files.
 
 ## Installation
 ```bash
