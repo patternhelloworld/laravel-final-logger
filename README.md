@@ -4,8 +4,7 @@
 
 ## Overview
 
-Laravel-final-logger provides unique and consistent formats throughout log (all Http, Ajax requests & responses), payload (all Http, Ajax requests & responses), and server-side error log. 
-Also, you can nullify any children properties to reduce the size of logged files.
+Laravel-final-logger provides unique and consistent formats for logs across all HTTP and Ajax requests and responses. Additionally, it allows you to nullify any child properties to reduce the size of log files.
 
 ## Installation
 ```bash
@@ -216,8 +215,7 @@ Route::group(['middleware' => 'your-name'], function () {
 ```
 
 ##### Set certain properties to empty (due to reducing size of log files or whatever...)
-The advantage of the library is that it is possible to set certain properties empty in payload hierarchy.
-Let's say we are setting the property 'stats' empty and 'img_cnt' empty at an uri (api/v2/final-test-uri/images).
+The advantage of the library is that it allows you to set certain properties to empty within the payload hierarchy to reduce the size of log files or for other reasons. For example, you can set the properties 'stats' and 'img_cnt' to empty for a specific URI (api/v2/final-test-uri/images).
 
 ```json
 {
@@ -324,7 +322,7 @@ return [
 ####4. How to throw errors on codes
 For handled errors, use this unique format.
 ```php
-// In case of NOT Ajax, add a current exception to the last parameter of FinalException (like $e below). 
+// In the case of non-Ajax requests, add the current exception as the last parameter of FinalException, like $e below.
   throw new FinalException('requested email address is not valid.',
                "", config('final-logger.error_user_code')['parameter validation'], "",
         config('final-logger.error_code')['Bad Request'], $e);
@@ -438,14 +436,13 @@ class ArticleController extends Controller
      }
 ```
 
-We focus on the final endpoints, so logging is conducted at the only following two points.
+We focus on the final endpoints, so logging is conducted only at the following two points:
 
 <span>1. </span> Middleware : Response endpoints.
 <br/>
 <span>2. </span> The point when the error occurs.
 
-No request endpoint logging is conducted, as the two points can catch all request data.
-
+No logging is conducted at the request endpoints, as the two points mentioned above can capture all request data.
 
 
 ### Changelog
